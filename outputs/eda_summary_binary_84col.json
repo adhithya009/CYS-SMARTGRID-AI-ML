@@ -1,0 +1,69 @@
+{
+  "dataset_root": "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets",
+  "all_csv_files_found": 313,
+  "selected_84col_files": 192,
+  "skipped_excluded_files": 24,
+  "skipped_non_84col_files": 97,
+  "header_errors": 0,
+  "read_errors": 0,
+  "total_rows_selected": 2594422,
+  "total_duplicate_rows_selected": 0,
+  "binary_label_counts": {
+    "NORMAL_0": 1965605,
+    "ATTACK_1": 628817
+  },
+  "binary_attack_rate_pct": 24.237267,
+  "top_10_largest_files": [
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver3\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver3.pcap_Flow.csv",
+      36127,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver4\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver4.pcap_Flow.csv",
+      35825,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver7\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver7.pcap_Flow.csv",
+      35674,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver1\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver1.pcap_Flow.csv",
+      35513,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver2\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver2.pcap_Flow.csv",
+      35499,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver6\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver6.pcap_Flow.csv",
+      35434,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver5\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_iecserver5.pcap_Flow.csv",
+      35370,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_qtester\\20200605_UOWM_IEC104_Dataset_c_rd_na_1_DoS_qtester.pcap_Flow.csv",
+      35234,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS_iecserver7\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS_iecserver7.pcap_Flow.csv",
+      34425,
+      0
+    ],
+    [
+      "\\\\?\\C:\\Users\\mgiri\\OneDrive\\Desktop\\Hemanth's academic Stuff\\College\\Amrita\\Machine learnign(ML)\\datasets\\datasets\\All the datasets\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS_iecserver5\\20200606_UOWM_IEC104_Dataset_c_rp_na_1_DoS_iecserver5.pcap_Flow.csv",
+      34206,
+      0
+    ]
+  ],
+  "top_10_files_with_duplicates": []
+}
