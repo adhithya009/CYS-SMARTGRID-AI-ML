@@ -1,2 +1,6 @@
 hi, this is me, adhithya, thoshan, and hemanth. we are doing our end semester project. this is a trial file. 
+<<<<<<< Updated upstream
 niga
+=======
+hi, I'm hemanth
+>>>>>>> Stashed changes
