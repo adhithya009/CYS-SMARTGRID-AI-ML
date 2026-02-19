@@ -1,0 +1,10 @@
+Flow-level classification (multi-feature)
+Sampled rows: 47379
+7z archives used: 2
+CSV members read: 38
+Feature count: 79
+Accuracy: 0.883812
+Precision: 0.981755
+Recall: 0.883496
+F1: 0.930037
+ROC AUC: 0.972347

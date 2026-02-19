@@ -1,0 +1,8 @@
+Flow-level linear regression (multi-feature)
+Sampled rows: 47379
+7z archives used: 2
+CSV members read: 38
+Feature count: 79
+R2: 0.655251
+RMSE: 0.194778
+MAE: 0.108914
