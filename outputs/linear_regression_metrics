@@ -1,0 +1,10 @@
+Run result (same dataset path, --max-rows 80000 --chunk-size 60000):
+
+Sampled rows: 47,379
+Features: 79
+R2: 0.655251
+RMSE: 0.194778
+MAE: 0.108914
+
+
+
