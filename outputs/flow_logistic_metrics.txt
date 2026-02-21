@@ -1,10 +1,15 @@
 Flow-level classification (multi-feature)
-Sampled rows: 47379
-7z archives used: 2
-CSV members read: 38
+Sampled rows: 158308
+7z archives used: 5
+CSV members read: 140
 Feature count: 79
-Accuracy: 0.883812
-Precision: 0.981755
-Recall: 0.883496
-F1: 0.930037
-ROC AUC: 0.972347
+Accuracy: 0.735551
+Precision: 0.976159
+Recall: 0.476379
+Specificity: 0.988638
+F1: 0.640289
+Log Loss: 0.451575
+ROC AUC: 0.799737
+ROC AOC: 0.799737
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[15837, 182], [8191, 7452]]
