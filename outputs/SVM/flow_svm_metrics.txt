@@ -1,0 +1,12 @@
+Flow-level classification with SVM (multi-feature)
+Sampled rows: 150000
+Files used: 93
+Feature count: 79
+Accuracy: 0.562100
+Precision: 0.464640
+Recall: 0.914412
+Specificity: 0.342105
+F1: 0.616180
+ROC AUC: 0.691541
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[6318, 12150], [987, 10545]]
