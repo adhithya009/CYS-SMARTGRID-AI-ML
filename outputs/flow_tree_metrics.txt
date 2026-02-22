@@ -1,0 +1,15 @@
+Flow-level Decision Tree classification (multi-feature)
+Sampled rows: 158308
+7z archives used: 5
+CSV members read: 140
+Feature count: 79
+Accuracy: 0.750963
+Precision: 0.906093
+Recall: 0.553283
+Specificity: 0.944004
+F1: 0.687041
+Log Loss: 0.542234
+ROC AUC: 0.834859
+ROC AOC: 0.834859
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[15122, 897], [6988, 8655]]
