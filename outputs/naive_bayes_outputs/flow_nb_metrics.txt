@@ -1,0 +1,14 @@
+Flow-level classification with Gaussian Naive Bayes (multi-feature)
+Sampled rows: 100000
+Files used: 61
+Feature count: 79
+var_smoothing: 1e-09
+Accuracy: 0.605150
+Precision: 0.730819
+Recall: 0.068105
+Specificity: 0.982380
+F1: 0.124598
+Log Loss: 8.813175
+ROC AUC: 0.603294
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[11541, 207], [7690, 562]]
