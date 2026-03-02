@@ -1,0 +1,19 @@
+Flow-level Gradient Boosting classification (multi-feature)
+Sampled rows: 158308
+7z archives used: 5
+CSV members read: 140
+Feature count: 79
+n_estimators: 250
+learning_rate: 0.1
+max_depth: 3
+subsample: 1.0
+Accuracy: 0.754058
+Precision: 0.945857
+Recall: 0.532698
+Specificity: 0.970223
+F1: 0.681552
+Log Loss: 0.420025
+ROC AUC: 0.840931
+ROC AOC: 0.840931
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[15542, 477], [7310, 8333]]
