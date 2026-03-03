@@ -77,6 +77,20 @@ def _discover_7z_archives(data_root: Path) -> list[Path]:
     return preferred + others
 
 
+def _count_csv_members_in_archives(archives: list[Path]) -> int:
+    if py7zr is None:
+        return 0
+
+    total_csv_members = 0
+    for archive in archives:
+        try:
+            with py7zr.SevenZipFile(archive, mode="r") as seven:
+                total_csv_members += sum(1 for name in seven.getnames() if name.lower().endswith(".csv"))
+        except Exception:
+            continue
+    return total_csv_members
+
+
 def _collect_sample(
     files: list[Path],
     max_rows: int,
@@ -274,6 +288,14 @@ def main() -> None:
     parser.add_argument("--chunk-size", type=int, default=120_000, help="Chunk size while reading CSVs.")
     parser.add_argument("--random-state", type=int, default=42, help="Random seed.")
     parser.add_argument("--max-iter", type=int, default=2000, help="Maximum iterations for logistic regression.")
+    parser.add_argument(
+        "--use-all-datasets",
+        action="store_true",
+        help=(
+            "Use every discovered dataset file (all CSVs across archives/folders) by ignoring rows_per_file_84col.csv "
+            "and disabling early stopping from max_rows."
+        ),
+    )
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parents[1]
@@ -283,7 +305,7 @@ def main() -> None:
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     rows_csv = outputs_dir / "rows_per_file_84col.csv"
-    files = _load_paths_from_rows_csv(rows_csv)
+    files = [] if args.use_all_datasets else _load_paths_from_rows_csv(rows_csv)
     archives: list[Path] = []
 
     if not files:
@@ -301,9 +323,14 @@ def main() -> None:
             if discover_root.is_file() and discover_root.suffix.lower() == ".7z":
                 archives = [discover_root]
             elif discover_root.is_dir():
-                files = _discover_schema_files(discover_root)
-                if not files:
+                if args.use_all_datasets:
                     archives = _discover_7z_archives(discover_root)
+                    if not archives:
+                        files = _discover_schema_files(discover_root)
+                else:
+                    files = _discover_schema_files(discover_root)
+                    if not files:
+                        archives = _discover_7z_archives(discover_root)
 
     if not files and not archives:
         raise FileNotFoundError(
@@ -312,22 +339,29 @@ def main() -> None:
             "or regenerate rows_per_file_84col.csv from this machine."
         )
 
+    effective_max_rows = args.max_rows if not args.use_all_datasets else 1_000_000_000
+
     if files:
         data, feature_cols, files_used = _collect_sample(
             files=files,
-            max_rows=args.max_rows,
+            max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
             random_state=args.random_state,
         )
-        source_details = f"Files used: {files_used}"
+        source_details = f"Dataset files used: {files_used}/{len(files)}\nFiles used: {files_used}"
     else:
+        total_dataset_files = _count_csv_members_in_archives(archives)
         data, feature_cols, archives_used, csv_members_used = _collect_sample_from_7z_archives(
             archives=archives,
-            max_rows=args.max_rows,
+            max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
             random_state=args.random_state,
         )
-        source_details = f"7z archives used: {archives_used}\nCSV members read: {csv_members_used}"
+        source_details = (
+            f"Dataset files used: {csv_members_used}/{total_dataset_files}\n"
+            f"7z archives used: {archives_used}\n"
+            f"CSV members read: {csv_members_used}"
+        )
 
     if data.empty or not feature_cols:
         raise RuntimeError("Failed to build a training sample. Check source CSV format and numeric feature availability.")
@@ -386,6 +420,8 @@ def main() -> None:
         f"Sampled rows: {len(data)}\n"
         f"{source_details}\n"
         f"Feature count: {len(feature_cols)}\n"
+        f"Use all dataset files: {'yes' if args.use_all_datasets else 'no'}\n"
+        f"Effective max rows: {effective_max_rows}\n"
         f"Accuracy: {accuracy:.6f}\n"
         f"Precision: {precision:.6f}\n"
         f"Recall: {recall:.6f}\n"
