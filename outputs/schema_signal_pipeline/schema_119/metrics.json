@@ -1,0 +1,29 @@
+{
+  "schema_cols": 119,
+  "model": "logistic",
+  "target_metric_for_threshold": "f1",
+  "threshold": 0.01,
+  "best_validation_target_metric": 1.0,
+  "rows": 9977,
+  "train_rows": 6293,
+  "val_rows": 1502,
+  "test_rows": 2182,
+  "train_groups": 28,
+  "val_groups": 8,
+  "test_groups": 10,
+  "source_files_used": 46,
+  "oversampled_rows_added": 0,
+  "metrics": {
+    "accuracy": 0.999083409715857,
+    "precision": 0.9980713596914176,
+    "recall": 1.0,
+    "specificity": 0.998256320836966,
+    "f1": 0.999034749034749,
+    "roc_auc": 1.0,
+    "log_loss": 0.0004408945856920245,
+    "tn": 1145.0,
+    "fp": 2.0,
+    "fn": 0.0,
+    "tp": 1035.0
+  }
+}

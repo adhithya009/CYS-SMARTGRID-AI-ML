@@ -1,0 +1,14 @@
+Schema-specific leakage-safe classification summary
+Model: logistic
+Target metric (threshold tuning): f1
+Schemas requested: [84, 112, 119]
+Schemas trained: 1
+Accuracy: 0.798074
+Precision: 0.993432
+Recall: 0.597039
+Specificity: 0.996111
+F1: 0.745839
+Log Loss: 0.386268
+ROC AUC: 0.855279
+Confusion Matrix (rows=actual [0,1], cols=pred [0,1]):
+[[3074, 12], [1225, 1815]]
