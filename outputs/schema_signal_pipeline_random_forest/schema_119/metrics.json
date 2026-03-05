@@ -1,0 +1,29 @@
+{
+  "schema_cols": 119,
+  "model": "random_forest",
+  "target_metric_for_threshold": "f1",
+  "threshold": 0.18000000000000002,
+  "best_validation_target_metric": 1.0,
+  "rows": 46892,
+  "train_rows": 34512,
+  "val_rows": 7648,
+  "test_rows": 9514,
+  "train_groups": 80,
+  "val_groups": 20,
+  "test_groups": 26,
+  "source_files_used": 126,
+  "oversampled_rows_added": 4782,
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "specificity": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "log_loss": 0.00026446148835579646,
+    "tn": 2373.0,
+    "fp": 0.0,
+    "fn": 0.0,
+    "tp": 7141.0
+  }
+}
