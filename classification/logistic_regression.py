@@ -20,7 +20,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -91,6 +91,47 @@ def _count_csv_members_in_archives(archives: list[Path]) -> int:
     return total_csv_members
 
 
+def _split_with_group_holdout(
+    x: pd.DataFrame,
+    y: np.ndarray,
+    groups: np.ndarray,
+    test_size: float,
+    random_state: int,
+    max_attempts: int = 30,
+) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    if len(x) != len(y) or len(x) != len(groups):
+        raise ValueError("x, y, and groups must have the same length.")
+    if len(np.unique(groups)) < 2:
+        raise RuntimeError("Need at least two groups for a leakage-safe split.")
+
+    for offset in range(max_attempts):
+        splitter = GroupShuffleSplit(
+            n_splits=1,
+            test_size=test_size,
+            random_state=random_state + offset,
+        )
+        train_idx, test_idx = next(splitter.split(x, y, groups=groups))
+        y_train = y[train_idx]
+        y_test = y[test_idx]
+
+        if np.unique(y_train).size < 2 or np.unique(y_test).size < 2:
+            continue
+
+        groups_train = groups[train_idx]
+        groups_test = groups[test_idx]
+        if set(groups_train).intersection(set(groups_test)):
+            continue
+
+        x_train = x.iloc[train_idx].reset_index(drop=True)
+        x_test = x.iloc[test_idx].reset_index(drop=True)
+        return x_train, x_test, y_train, y_test, groups_train, groups_test
+
+    raise RuntimeError(
+        "Failed to build a valid group-aware split with both classes in train/test. "
+        "Try increasing data size or adjusting class balance."
+    )
+
+
 def _collect_sample(
     files: list[Path],
     max_rows: int,
@@ -154,6 +195,77 @@ def _collect_sample(
     data = data.dropna(how="all", subset=feature_cols)
     data["label_bin"] = data["label_bin"].astype(int)
     return data, feature_cols, files_used
+
+
+def _collect_sample_with_groups(
+    files: list[Path],
+    max_rows: int,
+    chunk_size: int,
+    random_state: int,
+) -> tuple[pd.DataFrame, list[str], int, np.ndarray]:
+    rng = np.random.default_rng(random_state)
+    frames: list[pd.DataFrame] = []
+    group_frames: list[pd.Series] = []
+    feature_cols: list[str] | None = None
+    sampled_rows = 0
+    files_used = 0
+
+    for path in files:
+        used_this_file = False
+        group_id = str(path.resolve())
+        try:
+            for chunk in pd.read_csv(path, chunksize=chunk_size, low_memory=False):
+                if "Label" not in chunk.columns:
+                    continue
+
+                label_bin = np.where(chunk["Label"].astype("string") == "NORMAL", 0, 1)
+                numeric_chunk = chunk.select_dtypes(include=[np.number]).copy()
+                numeric_chunk["label_bin"] = label_bin
+
+                if feature_cols is None:
+                    feature_cols = [c for c in numeric_chunk.columns if c != "label_bin"]
+                    if not feature_cols:
+                        continue
+
+                numeric_chunk = numeric_chunk.reindex(columns=feature_cols + ["label_bin"])
+
+                remaining = max_rows - sampled_rows
+                if remaining <= 0:
+                    break
+
+                take_n = min(3000, len(numeric_chunk), remaining)
+                if take_n <= 0:
+                    continue
+
+                if take_n < len(numeric_chunk):
+                    idx = rng.choice(len(numeric_chunk), size=take_n, replace=False)
+                    sample = numeric_chunk.iloc[idx].reset_index(drop=True)
+                else:
+                    sample = numeric_chunk.reset_index(drop=True)
+
+                frames.append(sample)
+                group_frames.append(pd.Series(np.repeat(group_id, len(sample)), dtype="string"))
+                used_this_file = True
+                sampled_rows += len(sample)
+
+            if used_this_file:
+                files_used += 1
+            if sampled_rows >= max_rows:
+                break
+        except Exception:
+            continue
+
+    if not frames or feature_cols is None:
+        return pd.DataFrame(), [], 0, np.array([], dtype=object)
+
+    data = pd.concat(frames, ignore_index=True)
+    groups = pd.concat(group_frames, ignore_index=True)
+    data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    valid_mask = ~data[feature_cols].isna().all(axis=1)
+    data = data.loc[valid_mask].reset_index(drop=True)
+    groups = groups.loc[valid_mask].reset_index(drop=True)
+    data["label_bin"] = data["label_bin"].astype(int)
+    return data, feature_cols, files_used, groups.to_numpy(dtype=object)
 
 
 def _collect_sample_from_7z_archives(
@@ -244,6 +356,102 @@ def _collect_sample_from_7z_archives(
     data = data.dropna(how="all", subset=feature_cols)
     data["label_bin"] = data["label_bin"].astype(int)
     return data, feature_cols, archives_used, csv_members_used
+
+
+def _collect_sample_from_7z_archives_with_groups(
+    archives: list[Path],
+    max_rows: int,
+    chunk_size: int,
+    random_state: int,
+) -> tuple[pd.DataFrame, list[str], int, int, np.ndarray]:
+    if py7zr is None:
+        raise ModuleNotFoundError(
+            "py7zr is required to read .7z files. Install it with: python -m pip install py7zr"
+        )
+
+    rng = np.random.default_rng(random_state)
+    frames: list[pd.DataFrame] = []
+    group_frames: list[pd.Series] = []
+    feature_cols: list[str] | None = None
+    sampled_rows = 0
+    archives_used = 0
+    csv_members_used = 0
+
+    for archive in archives:
+        used_this_archive = False
+        try:
+            with py7zr.SevenZipFile(archive, mode="r") as seven:
+                csv_members = [n for n in seven.getnames() if n.lower().endswith(".csv")]
+                for member in csv_members:
+                    remaining = max_rows - sampled_rows
+                    if remaining <= 0:
+                        break
+
+                    seven.reset()
+                    with tempfile.TemporaryDirectory(prefix="iec104_") as tmpdir:
+                        seven.extract(targets=[member], path=tmpdir)
+                        extracted_csv = Path(tmpdir) / member
+                        if not extracted_csv.exists():
+                            continue
+
+                        group_id = f"{archive.resolve()}::{member}"
+                        for chunk in pd.read_csv(extracted_csv, chunksize=chunk_size, low_memory=False):
+                            if "Label" not in chunk.columns:
+                                continue
+
+                            label_bin = np.where(chunk["Label"].astype("string") == "NORMAL", 0, 1)
+                            numeric_chunk = chunk.select_dtypes(include=[np.number]).copy()
+                            numeric_chunk["label_bin"] = label_bin
+
+                            if feature_cols is None:
+                                feature_cols = [c for c in numeric_chunk.columns if c != "label_bin"]
+                                if not feature_cols:
+                                    continue
+
+                            numeric_chunk = numeric_chunk.reindex(columns=feature_cols + ["label_bin"])
+
+                            remaining = max_rows - sampled_rows
+                            if remaining <= 0:
+                                break
+
+                            take_n = min(3000, len(numeric_chunk), remaining)
+                            if take_n <= 0:
+                                continue
+
+                            if take_n < len(numeric_chunk):
+                                idx = rng.choice(len(numeric_chunk), size=take_n, replace=False)
+                                sample = numeric_chunk.iloc[idx].reset_index(drop=True)
+                            else:
+                                sample = numeric_chunk.reset_index(drop=True)
+
+                            frames.append(sample)
+                            group_frames.append(pd.Series(np.repeat(group_id, len(sample)), dtype="string"))
+                            sampled_rows += len(sample)
+                            used_this_archive = True
+
+                    if used_this_archive:
+                        csv_members_used += 1
+                    if sampled_rows >= max_rows:
+                        break
+        except Exception:
+            continue
+
+        if used_this_archive:
+            archives_used += 1
+        if sampled_rows >= max_rows:
+            break
+
+    if not frames or feature_cols is None:
+        return pd.DataFrame(), [], 0, 0, np.array([], dtype=object)
+
+    data = pd.concat(frames, ignore_index=True)
+    groups = pd.concat(group_frames, ignore_index=True)
+    data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    valid_mask = ~data[feature_cols].isna().all(axis=1)
+    data = data.loc[valid_mask].reset_index(drop=True)
+    groups = groups.loc[valid_mask].reset_index(drop=True)
+    data["label_bin"] = data["label_bin"].astype(int)
+    return data, feature_cols, archives_used, csv_members_used, groups.to_numpy(dtype=object)
 
 
 def _save_roc_curve(fpr: np.ndarray, tpr: np.ndarray, roc_auc: float, plot_path: Path) -> None:
@@ -342,7 +550,7 @@ def main() -> None:
     effective_max_rows = args.max_rows if not args.use_all_datasets else 1_000_000_000
 
     if files:
-        data, feature_cols, files_used = _collect_sample(
+        data, feature_cols, files_used, groups = _collect_sample_with_groups(
             files=files,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -351,7 +559,7 @@ def main() -> None:
         source_details = f"Dataset files used: {files_used}/{len(files)}\nFiles used: {files_used}"
     else:
         total_dataset_files = _count_csv_members_in_archives(archives)
-        data, feature_cols, archives_used, csv_members_used = _collect_sample_from_7z_archives(
+        data, feature_cols, archives_used, csv_members_used, groups = _collect_sample_from_7z_archives_with_groups(
             archives=archives,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -372,8 +580,12 @@ def main() -> None:
     if np.unique(y).size < 2:
         raise RuntimeError("Only one class is present in sampled data. Increase max rows or adjust the dataset source.")
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.2, random_state=args.random_state, stratify=y
+    x_train, x_test, y_train, y_test, groups_train, groups_test = _split_with_group_holdout(
+        x=x,
+        y=y,
+        groups=groups,
+        test_size=0.2,
+        random_state=args.random_state,
     )
 
     model = Pipeline(
@@ -422,6 +634,9 @@ def main() -> None:
         f"Feature count: {len(feature_cols)}\n"
         f"Use all dataset files: {'yes' if args.use_all_datasets else 'no'}\n"
         f"Effective max rows: {effective_max_rows}\n"
+        f"Group-aware split: yes\n"
+        f"Train groups: {len(np.unique(groups_train))}\n"
+        f"Test groups: {len(np.unique(groups_test))}\n"
         f"Accuracy: {accuracy:.6f}\n"
         f"Precision: {precision:.6f}\n"
         f"Recall: {recall:.6f}\n"

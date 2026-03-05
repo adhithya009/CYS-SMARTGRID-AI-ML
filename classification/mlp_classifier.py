@@ -18,7 +18,6 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -29,12 +28,13 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from classification.logistic_regression import (
     _clean_windows_extended_path,
-    _collect_sample,
-    _collect_sample_from_7z_archives,
+    _collect_sample_from_7z_archives_with_groups,
+    _collect_sample_with_groups,
     _count_csv_members_in_archives,
     _discover_7z_archives,
     _discover_schema_files,
     _load_paths_from_rows_csv,
+    _split_with_group_holdout,
 )
 
 
@@ -166,7 +166,7 @@ def main() -> None:
     effective_max_rows = args.max_rows if not args.use_all_datasets else 1_000_000_000
 
     if files:
-        data, feature_cols, files_used = _collect_sample(
+        data, feature_cols, files_used, groups = _collect_sample_with_groups(
             files=files,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -175,7 +175,7 @@ def main() -> None:
         source_details = f"Dataset files used: {files_used}/{len(files)}\nFiles used: {files_used}"
     else:
         total_dataset_files = _count_csv_members_in_archives(archives)
-        data, feature_cols, archives_used, csv_members_used = _collect_sample_from_7z_archives(
+        data, feature_cols, archives_used, csv_members_used, groups = _collect_sample_from_7z_archives_with_groups(
             archives=archives,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -196,8 +196,12 @@ def main() -> None:
     if np.unique(y).size < 2:
         raise RuntimeError("Only one class is present in sampled data. Increase max rows or adjust the dataset source.")
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.2, random_state=args.random_state, stratify=y
+    x_train, x_test, y_train, y_test, groups_train, groups_test = _split_with_group_holdout(
+        x=x,
+        y=y,
+        groups=groups,
+        test_size=0.2,
+        random_state=args.random_state,
     )
 
     model = Pipeline(
@@ -262,6 +266,9 @@ def main() -> None:
         f"Feature count: {len(feature_cols)}\n"
         f"Use all dataset files: {'yes' if args.use_all_datasets else 'no'}\n"
         f"Effective max rows: {effective_max_rows}\n"
+        f"Group-aware split: yes\n"
+        f"Train groups: {len(np.unique(groups_train))}\n"
+        f"Test groups: {len(np.unique(groups_test))}\n"
         f"hidden_layer_sizes: {hidden_layers}\n"
         f"activation: {args.activation}\n"
         f"alpha: {args.alpha}\n"

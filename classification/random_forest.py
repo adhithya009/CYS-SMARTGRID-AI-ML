@@ -20,7 +20,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 
 try:
@@ -34,11 +34,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from classification.logistic_regression import (
     _clean_windows_extended_path,
-    _collect_sample,
-    _collect_sample_from_7z_archives,
+    _collect_sample_from_7z_archives_with_groups,
+    _collect_sample_with_groups,
     _discover_7z_archives,
     _discover_schema_files,
     _load_paths_from_rows_csv,
+    _split_with_group_holdout,
 )
 
 
@@ -165,7 +166,7 @@ def _save_confusion_matrix_plot(cm: np.ndarray, plot_path: Path) -> None:
 
 def _load_source_files(args: argparse.Namespace, outputs_dir: Path) -> tuple[list[Path], list[Path]]:
     rows_csv = outputs_dir / "rows_per_file_84col.csv"
-    files = _load_paths_from_rows_csv(rows_csv)
+    files = [] if args.use_all_datasets else _load_paths_from_rows_csv(rows_csv)
     archives: list[Path] = []
 
     if not files:
@@ -183,9 +184,14 @@ def _load_source_files(args: argparse.Namespace, outputs_dir: Path) -> tuple[lis
             if discover_root.is_file() and discover_root.suffix.lower() == ".7z":
                 archives = [discover_root]
             elif discover_root.is_dir():
-                files = _discover_schema_files(discover_root)
-                if not files:
+                if args.use_all_datasets:
                     archives = _discover_7z_archives(discover_root)
+                    if not archives:
+                        files = _discover_schema_files(discover_root)
+                else:
+                    files = _discover_schema_files(discover_root)
+                    if not files:
+                        archives = _discover_7z_archives(discover_root)
 
     return files, archives
 
@@ -271,7 +277,7 @@ def main() -> None:
 
     if files:
         total_dataset_files = len(files)
-        data, feature_cols, files_used = _collect_sample(
+        data, feature_cols, files_used, groups = _collect_sample_with_groups(
             files=files,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -280,7 +286,7 @@ def main() -> None:
         source_details = f"Dataset files used: {files_used}/{total_dataset_files}\nFiles used: {files_used}"
     else:
         total_dataset_files = _count_csv_members_in_archives(archives)
-        data, feature_cols, archives_used, csv_members_used = _collect_sample_from_7z_archives(
+        data, feature_cols, archives_used, csv_members_used, groups = _collect_sample_from_7z_archives_with_groups(
             archives=archives,
             max_rows=effective_max_rows,
             chunk_size=args.chunk_size,
@@ -301,8 +307,12 @@ def main() -> None:
     if np.unique(y).size < 2:
         raise RuntimeError("Only one class is present in sampled data. Increase max rows or adjust the dataset source.")
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.2, random_state=args.random_state, stratify=y
+    x_train, x_test, y_train, y_test, groups_train, groups_test = _split_with_group_holdout(
+        x=x,
+        y=y,
+        groups=groups,
+        test_size=0.2,
+        random_state=args.random_state,
     )
 
     base_model = Pipeline(
@@ -326,17 +336,28 @@ def main() -> None:
         "classifier__max_features": max_features_grid,
     }
 
+    if len(np.unique(groups_train)) < args.cv_folds:
+        raise RuntimeError(
+            f"Not enough training groups ({len(np.unique(groups_train))}) for cv-folds={args.cv_folds}."
+        )
+
+    cv_splitter = StratifiedGroupKFold(
+        n_splits=args.cv_folds,
+        shuffle=True,
+        random_state=args.random_state,
+    )
+
     search = GridSearchCV(
         estimator=base_model,
         param_grid=param_grid,
         scoring="f1",
-        cv=args.cv_folds,
+        cv=cv_splitter,
         n_jobs=args.n_jobs,
         verbose=args.verbose,
         refit=True,
         return_train_score=False,
     )
-    search.fit(x_train, y_train)
+    search.fit(x_train, y_train, groups=groups_train)
 
     best_model = search.best_estimator_
     y_pred = best_model.predict(x_test)
@@ -397,6 +418,10 @@ def main() -> None:
         f"Feature count: {len(feature_cols)}\n"
         f"Use all dataset files: {'yes' if args.use_all_datasets else 'no'}\n"
         f"Effective max rows: {effective_max_rows}\n"
+        f"Group-aware split: yes\n"
+        f"Train groups: {len(np.unique(groups_train))}\n"
+        f"Test groups: {len(np.unique(groups_test))}\n"
+        f"Group-aware CV: StratifiedGroupKFold\n"
         f"CV folds: {args.cv_folds}\n"
         f"Grid n_estimators: {n_estimators_grid}\n"
         f"Grid max_depth: {max_depth_grid}\n"
